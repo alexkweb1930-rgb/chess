@@ -1,0 +1,27 @@
+name: chess-platform
+
+services:
+  rating-service:
+    build:
+      context: .
+      dockerfile: services/chess-rating-service/Dockerfile
+    container_name: chess-rating-service
+
+  game-service:
+    build:
+      context: .
+      dockerfile: services/chess-game-service/Dockerfile
+    container_name: chess-game-service
+    depends_on:
+      - rating-service
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: chess-platform-frontend
+    depends_on:
+      - game-service
+      - rating-service
+    ports:
+      - "3000:80"

@@ -1,0 +1,12 @@
+{
+  "serviceName": "chess-game-service",
+  "version": "0.1.0-test",
+  "env": "test",
+  "port": "9080",
+  "logLevel": "info",
+  "readTimeoutSeconds": 5,
+  "writeTimeoutSeconds": 10,
+  "shutdownTimeoutSeconds": 10,
+  "ratingServiceBaseURL": "http://localhost:9081",
+  "ratingServiceTimeoutSeconds": 3
+}

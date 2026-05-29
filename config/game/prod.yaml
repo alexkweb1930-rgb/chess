@@ -1,0 +1,12 @@
+{
+  "serviceName": "chess-game-service",
+  "version": "1.0.0",
+  "env": "prod",
+  "port": "8080",
+  "logLevel": "info",
+  "readTimeoutSeconds": 5,
+  "writeTimeoutSeconds": 10,
+  "shutdownTimeoutSeconds": 15,
+  "ratingServiceBaseURL": "http://chess-rating-service:8081",
+  "ratingServiceTimeoutSeconds": 3
+}

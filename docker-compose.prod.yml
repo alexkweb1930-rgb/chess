@@ -1,0 +1,19 @@
+services:
+  frontend:
+    build:
+      args:
+        VITE_GAME_SERVICE_URL: http://localhost:8080
+        VITE_RATING_SERVICE_URL: http://localhost:8081
+
+  rating-service:
+    environment:
+      APP_ENV: prod
+    ports:
+      - "8081:8081"
+
+  game-service:
+    environment:
+      APP_ENV: prod
+      RATING_SERVICE_BASE_URL: http://rating-service:8081
+    ports:
+      - "8080:8080"

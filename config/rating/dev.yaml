@@ -1,0 +1,12 @@
+{
+  "serviceName": "chess-rating-service",
+  "version": "0.1.0-dev",
+  "env": "dev",
+  "port": "8081",
+  "logLevel": "debug",
+  "readTimeoutSeconds": 5,
+  "writeTimeoutSeconds": 10,
+  "shutdownTimeoutSeconds": 10,
+  "initialRating": 1200,
+  "kFactor": 32
+}
