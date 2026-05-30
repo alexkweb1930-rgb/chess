@@ -8,11 +8,12 @@ ENV VITE_GAME_SERVICE_URL=$VITE_GAME_SERVICE_URL
 ENV VITE_RATING_SERVICE_URL=$VITE_RATING_SERVICE_URL
 
 COPY frontend/package.json ./package.json
+COPY frontend/package-lock.json ./package-lock.json
 COPY frontend/vite.config.js ./vite.config.js
 COPY frontend/index.html ./index.html
 COPY frontend/src ./src
 
-RUN npm install
+RUN npm ci
 RUN npm run build
 
 FROM nginx:1.27-alpine

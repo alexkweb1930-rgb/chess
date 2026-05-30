@@ -1,0 +1,12 @@
+FROM alpine:3.20
+
+WORKDIR /app
+
+COPY bin/chess-game-service /app/chess-game-service
+COPY config ./config
+
+ENV APP_ENV=prod
+
+EXPOSE 8080
+
+CMD ["./chess-game-service"]

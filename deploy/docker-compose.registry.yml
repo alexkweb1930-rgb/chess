@@ -1,0 +1,30 @@
+name: chess-platform
+
+services:
+  rating-service:
+    image: ${REGISTRY_IMAGE}/chess-rating-service:${IMAGE_TAG:-latest}
+    container_name: chess-rating-service
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+    ports:
+      - "${RATING_PORT:-8081}:8081"
+
+  game-service:
+    image: ${REGISTRY_IMAGE}/chess-game-service:${IMAGE_TAG:-latest}
+    container_name: chess-game-service
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      RATING_SERVICE_BASE_URL: http://rating-service:8081
+    depends_on:
+      - rating-service
+    ports:
+      - "${GAME_PORT:-8080}:8080"
+
+  frontend:
+    image: ${REGISTRY_IMAGE}/frontend:${IMAGE_TAG:-latest}
+    container_name: chess-platform-frontend
+    depends_on:
+      - game-service
+      - rating-service
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"

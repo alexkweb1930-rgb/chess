@@ -1,0 +1,12 @@
+FROM alpine:3.20
+
+WORKDIR /app
+
+COPY bin/chess-rating-service /app/chess-rating-service
+COPY config ./config
+
+ENV APP_ENV=prod
+
+EXPOSE 8081
+
+CMD ["./chess-rating-service"]
