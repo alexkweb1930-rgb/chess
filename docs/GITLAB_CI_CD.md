@@ -43,10 +43,12 @@ Jobs `build:chess-game-service` и `build:chess-rating-service` зависят �
 3. Открыть `Settings -> CI/CD -> Runners`.
 4. Подключить runner с Docker executor или включить shared runners, если они доступны в вашем GitLab.
 5. Если используете свой runner, для Docker-in-Docker ему нужен `privileged = true` в `config.toml`.
-6. Открыть `Settings -> CI/CD -> Variables` и при необходимости добавить переменные:
+6. Убедиться, что тег runner совпадает с `LOCAL_RUNNER_TAG` в `.gitlab-ci.yml`. Сейчас там стоит `chess`.
+7. Открыть `Settings -> CI/CD -> Variables` и при необходимости добавить переменные:
 
 | Variable | Зачем |
 | --- | --- |
+| `LOCAL_RUNNER_TAG` | Тег локального GitLab Runner. Нужен, чтобы jobs уходили именно на ваш runner |
 | `VITE_GAME_SERVICE_URL` | URL game-service, который будет зашит во frontend при сборке |
 | `VITE_RATING_SERVICE_URL` | URL rating-service, который будет зашит во frontend при сборке |
 
