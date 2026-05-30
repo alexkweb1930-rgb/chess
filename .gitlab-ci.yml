@@ -4,10 +4,9 @@ stages:
 
 default:
   tags:
-    - "$LOCAL_RUNNER_TAG"
+    - chess
 
 variables:
-  LOCAL_RUNNER_TAG: "chess"
   DOCKER_HOST: "tcp://docker:2375"
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
