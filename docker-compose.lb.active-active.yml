@@ -1,0 +1,98 @@
+name: chess-platform-lb-active-active
+
+services:
+  rating-service-a:
+    build:
+      context: .
+      dockerfile: services/chess-rating-service/Dockerfile
+    container_name: chess-lb-rating-service-a
+    environment:
+      APP_ENV: dev
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  rating-service-b:
+    build:
+      context: .
+      dockerfile: services/chess-rating-service/Dockerfile
+    container_name: chess-lb-rating-service-b
+    environment:
+      APP_ENV: dev
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  game-service-a:
+    build:
+      context: .
+      dockerfile: services/chess-game-service/Dockerfile
+    container_name: chess-lb-game-service-a
+    environment:
+      APP_ENV: dev
+      RATING_SERVICE_BASE_URL: http://load-balancer:8081
+    depends_on:
+      rating-service-a:
+        condition: service_healthy
+      rating-service-b:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  game-service-b:
+    build:
+      context: .
+      dockerfile: services/chess-game-service/Dockerfile
+    container_name: chess-lb-game-service-b
+    environment:
+      APP_ENV: dev
+      RATING_SERVICE_BASE_URL: http://load-balancer:8081
+    depends_on:
+      rating-service-a:
+        condition: service_healthy
+      rating-service-b:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  load-balancer:
+    image: haproxy:3.0-alpine
+    container_name: chess-lb-haproxy-active-active
+    depends_on:
+      game-service-a:
+        condition: service_healthy
+      game-service-b:
+        condition: service_healthy
+      rating-service-a:
+        condition: service_healthy
+      rating-service-b:
+        condition: service_healthy
+    volumes:
+      - ./infra/haproxy/active-active.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "8404:8404"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_GAME_SERVICE_URL: http://localhost:8080
+        VITE_RATING_SERVICE_URL: http://localhost:8081
+    container_name: chess-lb-frontend-active-active
+    depends_on:
+      - load-balancer
+    ports:
+      - "3000:80"
