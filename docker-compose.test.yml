@@ -10,6 +10,11 @@ services:
       APP_ENV: test
     ports:
       - "9081:9081"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   game-service:
     environment:
@@ -17,3 +22,8 @@ services:
       RATING_SERVICE_BASE_URL: http://rating-service:9081
     ports:
       - "9080:9080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5

@@ -8,6 +8,11 @@ services:
       APP_ENV: ${APP_ENV:-prod}
     ports:
       - "${RATING_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   game-service:
     image: ${REGISTRY_IMAGE}/chess-game-service:${IMAGE_TAG:-latest}
@@ -19,6 +24,11 @@ services:
       - rating-service
     ports:
       - "${GAME_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
   frontend:
     image: ${REGISTRY_IMAGE}/frontend:${IMAGE_TAG:-latest}
