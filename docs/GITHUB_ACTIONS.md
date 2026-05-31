@@ -1,38 +1,116 @@
 # GitHub Actions для Chess Platform
 
-## Что добавлено
+## Что настроено
 
-Workflow лежит в `.github/workflows/ci.yml`.
+Основной workflow лежит в `.github/workflows/ci.yml`.
 
-Он повторяет учебную схему из GitLab CI/CD:
+Он делает сборку и доставку трех частей проекта:
 
-1. `compile-go-services` компилирует два Go-бинарника и сохраняет их как artifact.
-2. `build-chess-game-service` скачивает artifact и собирает Docker image для сервиса партий.
-3. `build-chess-rating-service` скачивает artifact и собирает Docker image для сервиса рейтингов.
-4. `build-frontend` собирает Docker image фронтенда через `frontend/Dockerfile`.
+1. `chess-game-service`
+2. `chess-rating-service`
+3. `frontend`
 
-## Когда запускается
+Go-сервисы собираются в два связанных этапа: сначала компиляция бинарников, потом упаковка этих бинарников в Docker images. Это ровно та схема, которая нужна для учебной работы про сборку и доставку микросервиса.
 
-Workflow запускается:
+## Этап 1: compile-go-services
 
-- при push в `master`;
-- при push в `main`;
-- при pull request в `master` или `main`;
-- при push Git tag вида `v*`, например `v1.0.0`;
-- вручную через `Actions -> CI -> Run workflow`.
+Job `compile-go-services` запускается на `ubuntu-latest`.
 
-На pull request образы только собираются, но не публикуются.
-На push и tag образы собираются и публикуются в GitHub Container Registry.
+Что происходит:
 
-## Куда публикуются Docker images
+1. Репозиторий скачивается через `actions/checkout`.
+2. Устанавливается Go версии `1.24.x`.
+3. Запускается проверка:
 
-GitHub Actions публикует образы в GHCR:
+```bash
+go test ./...
+```
+
+4. Собираются Linux-бинарники:
+
+```bash
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/chess-game-service ./services/chess-game-service
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/chess-rating-service ./services/chess-rating-service
+```
+
+5. Готовые файлы сохраняются как artifact `go-services`:
+
+```text
+bin/chess-game-service
+bin/chess-rating-service
+```
+
+Зачем это нужно: мы фиксируем результат компиляции отдельно от Docker-сборки. Следующие jobs не пересобирают Go-код, а берут уже готовые бинарники.
+
+## Этап 2: build-chess-game-service
+
+Job `build-chess-game-service` зависит от `compile-go-services`.
+
+Что происходит:
+
+1. Репозиторий скачивается заново.
+2. Artifact `go-services` скачивается в папку `bin`.
+3. Бинарнику возвращается право на запуск:
+
+```bash
+chmod +x bin/chess-game-service
+```
+
+4. Через `docker/metadata-action` готовятся Docker tags.
+5. Через `docker/build-push-action` собирается image по файлу:
+
+```text
+services/chess-game-service/Dockerfile.runtime
+```
+
+Runtime Dockerfile не компилирует Go-код. Он только кладет в Alpine-образ готовый бинарник и папку `config`.
+
+## Этап 3: build-chess-rating-service
+
+Job `build-chess-rating-service` устроен так же, как job для game-service.
+
+Отличия:
+
+- используется бинарник `bin/chess-rating-service`;
+- используется Dockerfile `services/chess-rating-service/Dockerfile.runtime`;
+- публикуется отдельный image рейтингового сервиса.
+
+## Этап 4: build-frontend
+
+Job `build-frontend` собирает Docker image фронтенда.
+
+Что происходит:
+
+1. Репозиторий скачивается.
+2. Подготавливаются Docker tags.
+3. Собирается image через `frontend/Dockerfile`.
+4. В Docker build передаются адреса backend-сервисов:
+
+```text
+VITE_GAME_SERVICE_URL=http://localhost:8080
+VITE_RATING_SERVICE_URL=http://localhost:8081
+```
+
+Внутри `frontend/Dockerfile` выполняется:
+
+```bash
+npm ci
+npm run build
+```
+
+После сборки статические файлы попадают в nginx image.
+
+## Публикация Docker images
+
+Images публикуются в GitHub Container Registry:
 
 ```text
 ghcr.io/<owner>/<repo>/chess-game-service
 ghcr.io/<owner>/<repo>/chess-rating-service
 ghcr.io/<owner>/<repo>/frontend
 ```
+
+Публикация включается только для `push` и Git tags. Для pull request images собираются, но не публикуются.
 
 Теги создаются автоматически:
 
@@ -41,46 +119,29 @@ ghcr.io/<owner>/<repo>/frontend
 - `latest` для default branch;
 - имя Git tag, например `v1.0.0`.
 
-## Что нужно включить в GitHub
+## Когда запускается workflow
+
+Workflow запускается:
+
+- при push в `master`;
+- при push в `main`;
+- при pull request в `master` или `main`;
+- при push Git tag вида `v*`;
+- вручную через `Actions -> CI -> Run workflow`.
+
+## Что нужно в настройках GitHub
 
 1. Открыть репозиторий на GitHub.
 2. Перейти в `Settings -> Actions -> General`.
-3. Включить `Allow all actions and reusable workflows` или разрешить actions:
-   - `actions/checkout`
-   - `actions/setup-go`
-   - `actions/upload-artifact`
-   - `actions/download-artifact`
-   - `docker/login-action`
-   - `docker/metadata-action`
-   - `docker/build-push-action`
-4. В этом же разделе открыть `Workflow permissions`.
-5. Выбрать `Read and write permissions`.
-6. Сохранить настройки.
+3. Разрешить GitHub Actions.
+4. В `Workflow permissions` выбрать `Read and write permissions`.
+5. Сохранить настройки.
 
-Отдельный token добавлять не нужно: workflow использует стандартный `secrets.GITHUB_TOKEN`.
+Отдельный token для публикации packages не нужен: workflow использует стандартный `secrets.GITHUB_TOKEN`.
 
-## Как запустить
+## Как запустить опубликованные images
 
-Обычный вариант:
-
-```bash
-git add .
-git commit -m "Add GitHub Actions CI"
-git push origin master
-```
-
-Если основная ветка называется `main`, push делается в `main`.
-
-После push:
-
-1. Открыть вкладку `Actions`.
-2. Выбрать workflow `CI`.
-3. Дождаться прохождения jobs.
-4. Открыть `Packages` в профиле/организации или в репозитории и проверить опубликованные images.
-
-## Как запускать опубликованные images
-
-Для `deploy/docker-compose.registry.yml` можно использовать GHCR вместо GitLab Registry.
+Для запуска готовых образов используется файл `deploy/docker-compose.registry.yml`.
 
 Пример `deploy/.env`:
 
@@ -106,4 +167,10 @@ docker login ghcr.io
 
 ```bash
 docker compose --env-file deploy/.env -f deploy/docker-compose.registry.yml up -d
+```
+
+Остановка:
+
+```bash
+docker compose -f deploy/docker-compose.registry.yml down
 ```
